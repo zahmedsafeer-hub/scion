@@ -365,6 +365,16 @@ type V1ServerConfig struct {
 
 	// Federation configures hub-hub federation authentication.
 	Federation *V1FederationConfig `json:"federation,omitempty" yaml:"federation,omitempty" koanf:"federation"`
+
+	// GEGoogleExchange configures Gemini Enterprise Google credential exchange.
+	GEGoogleExchange *V1GEGoogleExchangeConfig `json:"ge_google_exchange,omitempty" yaml:"ge_google_exchange,omitempty" koanf:"ge_google_exchange"`
+}
+
+// V1GEGoogleExchangeConfig holds settings.yaml configuration for GE Google credential exchange.
+type V1GEGoogleExchangeConfig struct {
+	Enabled          *bool    `json:"enabled,omitempty" yaml:"enabled,omitempty" koanf:"enabled"`
+	AllowedClientIDs []string `json:"allowed_client_ids,omitempty" yaml:"allowed_client_ids,omitempty" koanf:"allowed_client_ids"`
+	TokenTTL         string   `json:"token_ttl,omitempty" yaml:"token_ttl,omitempty" koanf:"token_ttl"`
 }
 
 // V1GitHubAppConfig holds the GitHub App configuration in settings.yaml format.
@@ -1731,6 +1741,19 @@ func ConvertV1ServerToGlobalConfig(v1 *V1ServerConfig) *GlobalConfig {
 		if v1.Federation.DebounceInterval != "" {
 			if d, err := time.ParseDuration(v1.Federation.DebounceInterval); err == nil {
 				gc.Federation.Cache.DebounceInterval = d
+			}
+		}
+	}
+
+	// GE Google Exchange
+	if v1.GEGoogleExchange != nil {
+		if v1.GEGoogleExchange.Enabled != nil {
+			gc.GEGoogleExchange.Enabled = *v1.GEGoogleExchange.Enabled
+		}
+		gc.GEGoogleExchange.AllowedClientIDs = v1.GEGoogleExchange.AllowedClientIDs
+		if v1.GEGoogleExchange.TokenTTL != "" {
+			if d, err := time.ParseDuration(v1.GEGoogleExchange.TokenTTL); err == nil {
+				gc.GEGoogleExchange.TokenTTL = d
 			}
 		}
 	}

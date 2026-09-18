@@ -1673,6 +1673,7 @@ func initHubServer(ctx context.Context, cfg *config.GlobalConfig, s store.Store,
 		OIDCLogin:               cfg.OIDCLogin,
 		OIDCConfig:              cfg.OIDC,
 		Federation:              cfg.Federation,
+		GEGoogleExchange:        resolveGEGoogleExchangeConfig(cfg),
 		WorkspaceStorageConfig:  cfg.WorkspaceStorage,
 		// nil (no server.native_chat section) means enabled — chat is default-on.
 		NativeChatEnabled: cfg.NativeChat.EnabledSetting(),
@@ -2940,6 +2941,61 @@ func resolveHubEndpointForBroker(cfg *config.GlobalConfig, settings *config.Sett
 		hubEndpointForRH = settings.Hub.Endpoint
 	}
 	return hubEndpointForRH
+}
+
+// resolveGEGoogleExchangeConfig builds the Hub's GEGoogleExchangeConfig from
+// settings.yaml and environment variable overrides.
+func resolveGEGoogleExchangeConfig(cfg *config.GlobalConfig) hub.GEGoogleExchangeConfig {
+	geCfg := hub.GEGoogleExchangeConfig{
+		Enabled:          cfg.GEGoogleExchange.Enabled,
+		AllowedClientIDs: append([]string(nil), cfg.GEGoogleExchange.AllowedClientIDs...),
+		TokenTTL:         cfg.GEGoogleExchange.TokenTTL,
+	}
+
+	if v := strings.TrimSpace(os.Getenv("SCION_SERVER_GE_GOOGLE_EXCHANGE_ENABLED")); v != "" {
+		geCfg.Enabled = parseBoolEnv("SCION_SERVER_GE_GOOGLE_EXCHANGE_ENABLED")
+	} else if v := strings.TrimSpace(os.Getenv("SCION_GE_GOOGLE_EXCHANGE_ENABLED")); v != "" {
+		geCfg.Enabled = parseBoolEnv("SCION_GE_GOOGLE_EXCHANGE_ENABLED")
+	}
+
+	rawClientIDs := strings.TrimSpace(os.Getenv("SCION_SERVER_GE_GOOGLE_ALLOWED_CLIENT_IDS"))
+	if rawClientIDs == "" {
+		rawClientIDs = strings.TrimSpace(os.Getenv("SCION_GE_GOOGLE_ALLOWED_CLIENT_IDS"))
+	}
+	if rawClientIDs != "" {
+		var ids []string
+		for _, part := range strings.Split(rawClientIDs, ",") {
+			if id := strings.TrimSpace(part); id != "" {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) > 0 {
+			geCfg.AllowedClientIDs = ids
+		}
+	}
+
+	rawTTL := strings.TrimSpace(os.Getenv("SCION_SERVER_GE_GOOGLE_TOKEN_TTL"))
+	if rawTTL == "" {
+		rawTTL = strings.TrimSpace(os.Getenv("SCION_GE_GOOGLE_TOKEN_TTL"))
+	}
+	if rawTTL != "" {
+		if d, err := time.ParseDuration(rawTTL); err == nil {
+			geCfg.TokenTTL = d
+		}
+	}
+
+	// If GE exchange is enabled and no explicit AllowedClientIDs were provided,
+	// default to the configured Hub Google OAuth client IDs (if any).
+	if geCfg.Enabled && len(geCfg.AllowedClientIDs) == 0 {
+		if id := strings.TrimSpace(cfg.OAuth.Web.Google.ClientID); id != "" {
+			geCfg.AllowedClientIDs = append(geCfg.AllowedClientIDs, id)
+		}
+		if id := strings.TrimSpace(cfg.OAuth.CLI.Google.ClientID); id != "" && id != strings.TrimSpace(cfg.OAuth.Web.Google.ClientID) {
+			geCfg.AllowedClientIDs = append(geCfg.AllowedClientIDs, id)
+		}
+	}
+
+	return geCfg
 }
 
 // resolveMaintenanceConfig builds the maintenance config from versioned settings

@@ -272,3 +272,33 @@ func TestInitWebServer_DevAuth_NonLoopback_Rejected(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveGEGoogleExchangeConfig(t *testing.T) {
+	t.Run("settings_yaml_config", func(t *testing.T) {
+		cfg := &config.GlobalConfig{}
+		cfg.GEGoogleExchange.Enabled = true
+		cfg.GEGoogleExchange.AllowedClientIDs = []string{"ge-client-1.apps.googleusercontent.com"}
+		got := resolveGEGoogleExchangeConfig(cfg)
+		assert.True(t, got.Enabled)
+		assert.Equal(t, []string{"ge-client-1.apps.googleusercontent.com"}, got.AllowedClientIDs)
+	})
+
+	t.Run("fallback_to_web_google_oauth_client_id", func(t *testing.T) {
+		cfg := &config.GlobalConfig{}
+		cfg.GEGoogleExchange.Enabled = true
+		cfg.OAuth.Web.Google.ClientID = "hub-web-client.apps.googleusercontent.com"
+		got := resolveGEGoogleExchangeConfig(cfg)
+		assert.True(t, got.Enabled)
+		assert.Equal(t, []string{"hub-web-client.apps.googleusercontent.com"}, got.AllowedClientIDs)
+	})
+
+	t.Run("env_override", func(t *testing.T) {
+		t.Setenv("SCION_GE_GOOGLE_EXCHANGE_ENABLED", "true")
+		t.Setenv("SCION_GE_GOOGLE_ALLOWED_CLIENT_IDS", "client-a.apps.googleusercontent.com, client-b.apps.googleusercontent.com")
+		cfg := &config.GlobalConfig{}
+		got := resolveGEGoogleExchangeConfig(cfg)
+		assert.True(t, got.Enabled)
+		assert.Equal(t, []string{"client-a.apps.googleusercontent.com", "client-b.apps.googleusercontent.com"}, got.AllowedClientIDs)
+	})
+}
+

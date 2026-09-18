@@ -556,9 +556,20 @@ type GlobalConfig struct {
 	// Federation settings for hub-hub authentication
 	Federation FederationConfig `json:"federation,omitempty" yaml:"federation,omitempty" koanf:"federation"`
 
+	// GEGoogleExchange settings for Gemini Enterprise Google credential exchange
+	GEGoogleExchange GEGoogleExchangeConfig `json:"geGoogleExchange,omitempty" yaml:"geGoogleExchange,omitempty" koanf:"geGoogleExchange"`
+
 	// SlowRequestThreshold is the duration after which an HTTP request is
 	// logged as slow. Default: 10s when unset/zero.
 	SlowRequestThreshold time.Duration `json:"slowRequestThreshold,omitempty" yaml:"slowRequestThreshold,omitempty" koanf:"slowRequestThreshold"`
+}
+
+// GEGoogleExchangeConfig holds configuration for the Hub's Gemini Enterprise
+// Google credential exchange endpoint (POST /api/v1/auth/integrations/google/exchange).
+type GEGoogleExchangeConfig struct {
+	Enabled          bool          `json:"enabled" yaml:"enabled" koanf:"enabled"`
+	AllowedClientIDs []string      `json:"allowedClientIds,omitempty" yaml:"allowedClientIds,omitempty" koanf:"allowedClientIds"`
+	TokenTTL         time.Duration `json:"tokenTtl,omitempty" yaml:"tokenTtl,omitempty" koanf:"tokenTtl"`
 }
 
 // SchedulerConfig holds configuration for the Hub background task scheduler.
